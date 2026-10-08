@@ -1,0 +1,189 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Sídhe’s Seanchaí V0.6.4</title><style>
+:root{font-family:system-ui,sans-serif;color:#eee;background:#111827}body{margin:0}.top{display:flex;gap:12px;align-items:center;padding:14px 18px;background:#0b1220;position:sticky;top:0}.top h1{font-size:18px;margin:0 auto 0 0}.live{font-size:12px;color:#86efac}.source{font-size:12px;padding:6px 9px;border:1px solid #475569;border-radius:8px;background:#0f172a;color:#e2e8f0}.source strong{color:#86efac}button,input,select{font:inherit}.wrap{display:grid;grid-template-columns:1fr 1.1fr;gap:16px;padding:16px}.panel{background:#182235;border:1px solid #334155;border-radius:12px;padding:14px}.hidden{display:none}.inputrow{display:flex;gap:8px}.inputrow input{flex:1;padding:10px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:white}.btn{padding:9px 12px;border:0;border-radius:8px;cursor:pointer}.card{padding:12px;margin:10px 0;background:#0f172a;border:1px solid #334155;border-radius:10px}.card h3{margin:0 0 4px}.meta{font-size:12px;color:#94a3b8}.transcript{white-space:pre-wrap;line-height:1.5}.diagnostic{font-family:monospace;font-size:12px;color:#cbd5e1}.empty{color:#94a3b8}@media(max-width:800px){.wrap{grid-template-columns:1fr}}
+</style></head><body>
+
+<section class="panel" id="micPanel" style="margin-bottom:16px;">
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <strong>Microphone Transcription Test</strong>
+    <span id="micStatus" style="padding:4px 8px;border:1px solid #666;border-radius:999px;">MIC STOPPED</span>
+  </div>
+  <p style="margin:8px 0;">Mobile/HTTPS microphone test. Open this page from an HTTPS host, then tap Start Mic. Manual input remains available.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button id="startMicBtn" type="button">Start Mic</button>
+    <button id="stopMicBtn" type="button" disabled>Stop Mic</button>
+  </div>
+  <div id="environment" class="diagnostic" style="margin-top:10px;"></div>
+  <div style="margin-top:10px;">
+    <small>Live/interim transcript</small>
+    <div id="micInterim" style="min-height:2em;padding:8px;border:1px dashed #666;border-radius:6px;"></div>
+  </div>
+</section>
+
+<div class="top"><h1>The Sídhe’s Seanchaí <span class="meta">V0.6.4 · <span id="kbStatus">KB: loading…</span></span></h1><span id="state" class="live">READY</span><button id="startBtn" class="btn" onclick="startSession()">Start Session</button><button id="pauseBtn" class="btn" onclick="togglePause()" disabled>Pause</button><button id="endBtn" class="btn" onclick="endSession()" disabled>End Session</button><span id="inputSource" class="source">Input: <strong>MANUAL</strong></span><button class="btn" onclick="toggleTranscript()">Transcript</button></div>
+<div class="wrap"><section class="panel"><h2>DM Input</h2><p class="meta">Manual text and browser transcription feed the same retrieval pipeline. Mobile testing requires an HTTPS-hosted copy of this page.</p><div class="inputrow"><input id="input" placeholder="e.g. They leave Meena and see a sea dragon elf"><button class="btn" onclick="submitLine()">Process</button></div><h2>Relevant References</h2><div id="refs" class="empty">No references yet.</div></section>
+<section><div id="transcriptPanel" class="panel hidden"><h2>Current Transcript</h2><div id="transcript" class="transcript empty">Transcript hidden by default; no lines yet.</div></div><div class="panel"><h2>Developer Match Log</h2><div id="log" class="diagnostic empty">No matches yet.</div></div></section></div>
+<script>
+const EMBEDDED_KB=[{"id":"place_mina","name":"Mina","type":"Place","variants":["meena","mena"],"keywords":["island port","port of entry","gateway","harbor"],"quick":"Island port city and major gateway into Ard Sakhina.","details":{"Location":"Ard Sakhina","Role":"Port of entry","Notable sites":"Almasira; Yulana Os; Qal'at Fort; Tashkil, the Everburning Forge","Defenses":"Naval defenses and Sea Dragonelle patrols","Trade":"Refines imported goods including ingots, dyes, and dried meats"},"relationships":[{"target":"nation_ard_sakhina","kind":"located_in"},{"target":"place_qalat_fort","kind":"contains"},{"target":"creature_sea_dragonelle","kind":"patrolled_by"}]},{"id":"place_qalat_fort","name":"Qal'at Fort","type":"Place","variants":["qalat fort","kalat fort","the fort"],"keywords":["fort","fortress","naval defense","prison"],"quick":"Fortification in Mina serving naval-defense and prison functions.","details":{"Location":"Mina, Ard Sakhina","Functions":"Naval defense; prison"},"relationships":[{"target":"place_mina","kind":"located_in"},{"target":"nation_ard_sakhina","kind":"located_in"}]},{"id":"nation_ard_sakhina","name":"Ard Sakhina","type":"Nation","variants":["art sakina","ard sakina","artsequena"],"keywords":["efreet","sakhinian"],"quick":"Efreet polity centered on Alnaar Alwahid.","details":{"Government":"Constitutional monarchy","Capital":"Alnaar Alwahid","Geography":"Ashai Lake, Ashara River, Ashala waterfall and Wadi Al-Hayat","Landmarks":"Shahi Mahal; Grand Bazaar; Caravanserai","Patrols":"Dragonelle Faris"},"relationships":[{"target":"place_mina","kind":"contains"},{"target":"place_qalat_fort","kind":"contains"}]},{"id":"npc_zhongfu","name":"Zhongfu","type":"NPC","variants":["zongfu","jong fu","zhong fu"],"keywords":["great khan","emperor","dao khanate"],"quick":"Great Khan of the Dao Khanate.","details":{"Role":"Ruler of the Dao Khanate","Capital":"Tianteng","Status":"Emperor worship sustains him"},"relationships":[]},{"id":"creature_sea_dragonelle","name":"Sea Dragonelle","type":"Creature","variants":["sea dragon elf","sea dragon elves","sea dragonel","sea dragon elle"],"keywords":["dragonelle","sea patrol","naval patrol"],"quick":"Sea-adapted dragonelle associated with Mina patrols.","details":{"Association":"Mina","Recognition note":"Speech-to-text may render the name as sea dragon elf; that is not a canonical alias."},"relationships":[{"target":"place_mina","kind":"patrols"}]},{"id":"spell_fireball","name":"Fireball","type":"Spell","variants":["fire ball"],"keywords":["spell","fire spell"],"quick":"5e spell reference placeholder.","details":{"Rules":"Rules text is not bundled in this prototype; an approved 5e rules source can be connected later."},"relationships":[]},{"id":"item_greatsword_wounding","name":"Greatsword of Wounding","type":"Item","variants":["great sword of wounding"],"keywords":["greatsword","wounding","magic sword"],"quick":"5e magic-item reference placeholder.","details":{"Rules":"Rules text is not bundled in this prototype; an approved 5e rules source can be connected later."},"relationships":[]}];
+let KB=EMBEDDED_KB;
+let sessionState='ready';
+let sessionStartedAt=null;
+let lines=[];
+let inputMode='manual';
+const transcriptionAdapter={
+  connected:false,
+  engine:'not connected',
+  ingest(text){return ingestTranscript(text,'transcription');}
+};
+function norm(s){return s.toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()}
+function levenshtein(a,b){const m=Array.from({length:b.length+1},(_,i)=>[i]);for(let j=0;j<=a.length;j++)m[0][j]=j;for(let i=1;i<=b.length;i++)for(let j=1;j<=a.length;j++)m[i][j]=Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(b[i-1]===a[j-1]?0:1));return m[b.length][a.length]}
+function directMatch(text){const n=norm(text),out=[];for(const e of KB){const names=[norm(e.name),...(e.variants||[]).map(norm)];let best=null;for(const candidate of names){if(n.includes(candidate)){const method=candidate===norm(e.name)?'exact':'recognition_variant';best={entity:e,heard:candidate,method,confidence:method==='exact'?1:.96};break}}
+if(!best){const words=n.split(' ');for(const candidate of names){const size=candidate.split(' ').length;for(let i=0;i<=words.length-size;i++){const chunk=words.slice(i,i+size).join(' '),d=levenshtein(chunk,candidate),score=1-d/Math.max(chunk.length,candidate.length);if(score>=.78 && (!best||score>best.confidence))best={entity:e,heard:chunk,method:'fuzzy',confidence:score}}}}
+if(best)out.push(best)}return out}
+function match(text){
+ const n=norm(text), direct=directMatch(text), byId=new Map();
+ const recentText=norm(lines.slice(-3).join(' '));
+ // Ranking score is intentionally separate from recognition confidence.
+ for(const m of direct){
+   const directWeight=m.method==='exact'?100:m.method==='recognition_variant'?94:Math.round(m.confidence*86);
+   byId.set(m.entity.id,{...m,score:directWeight,reasons:[`direct ${m.method.replaceAll('_',' ')}`]});
+ }
+ for(const e of KB){
+   if(byId.has(e.id))continue;
+   const hits=(e.keywords||[]).map(norm).filter(k=>k && n.includes(k));
+   if(!hits.length)continue;
+   const relatedDirect=[];
+   for(const d of direct){
+     const forward=(e.relationships||[]).some(r=>r.target===d.entity.id);
+     const reverse=(d.entity.relationships||[]).some(r=>r.target===e.id);
+     if(forward||reverse)relatedDirect.push(d.entity.name);
+   }
+   let score=42 + Math.min(18,hits.length*6) + Math.min(24,relatedDirect.length*12);
+   const recent=(e.keywords||[]).map(norm).some(k=>k && recentText.includes(k));
+   if(recent){score+=5;}
+   if(relatedDirect.length||hits.length>=2){
+     byId.set(e.id,{entity:e,heard:hits.join(', '),method:relatedDirect.length?'context_relationship':'context_keywords',confidence:Math.min(.92,score/100),score:Math.min(92,score),context:relatedDirect,reasons:[`${hits.length} context keyword${hits.length===1?'':'s'}`,...(relatedDirect.length?[`related to ${relatedDirect.join(', ')}`]:[]),...(recent?['recent context']:[])]});
+   }
+ }
+ // Relationship boost: references connected to a strong direct match should outrank weak contextual noise.
+ for(const m of byId.values()){
+   if(m.method.startsWith('context')){
+     const linkedStrong=direct.some(d=>(m.entity.relationships||[]).some(r=>r.target===d.entity.id)||(d.entity.relationships||[]).some(r=>r.target===m.entity.id));
+     if(linkedStrong){m.score=Math.min(96,m.score+8);m.reasons.push('relationship boost');}
+   }
+ }
+ return [...byId.values()].sort((a,b)=>b.score-a.score || b.confidence-a.confidence || a.entity.name.localeCompare(b.entity.name));
+}
+function setInputSource(source){inputMode=source;document.getElementById('inputSource').innerHTML=`Input: <strong>${source==='manual'?'MANUAL':'TRANSCRIPTION'}</strong>`;}
+function ingestTranscript(text,source='manual'){text=(text||'').trim();if(!text)return false;if(sessionState!=='active')return false;setInputSource(source);lines.push(text);const matches=match(text);render(matches);return true;}
+function submitLine(){const el=document.getElementById('input'),text=el.value.trim();if(!text)return;if(sessionState!=='active'){alert('Start a session before processing transcript text.');return;}if(ingestTranscript(text,'manual'))el.value='';}
+function simulateTranscription(text){return transcriptionAdapter.ingest(text);}
+function render(matches){const t=document.getElementById('transcript');t.className='transcript';t.textContent=lines.join('\n');const r=document.getElementById('refs'),l=document.getElementById('log');if(!matches.length){r.className='empty';r.textContent='No references detected in the latest line.';l.className='diagnostic';l.textContent='Latest line: no match';return}r.className='';r.innerHTML=matches.map((m,i)=>`<div class="card"><h3>${i===0?'★ ':''}${m.entity.name}</h3><div class="meta">${m.entity.type} · rank ${Math.round(m.score)} · ${Math.round(m.confidence*100)}% confidence · ${m.method.replaceAll('_',' ')}</div><p>${m.entity.quick}</p><details><summary>Details</summary>${Object.entries(m.entity.details||{}).map(([k,v])=>`<p><strong>${k}:</strong> ${v}</p>`).join('')}${(m.entity.relationships||[]).length?`<p><strong>Relationships:</strong> ${m.entity.relationships.map(rel=>{const x=KB.find(e=>e.id===rel.target);return `${rel.kind.replaceAll('_',' ')} → ${x?x.name:rel.target}`}).join('; ')}</p>`:''}</details></div>`).join('');l.className='diagnostic';l.textContent=matches.map((m,i)=>`${i+1}. ${m.entity.name} <- "${m.heard}" | ${m.method} | rank ${m.score} | confidence ${(m.confidence*100).toFixed(1)}% | ${m.reasons.join('; ')}`).join('\n')}
+function toggleTranscript(){document.getElementById('transcriptPanel').classList.toggle('hidden')}
+function setState(state){sessionState=state;const label={ready:'READY',active:'SESSION ACTIVE',paused:'PAUSED',ended:'SESSION ENDED'}[state];document.getElementById('state').textContent=label;document.getElementById('startBtn').disabled=(state==='active'||state==='paused');document.getElementById('pauseBtn').disabled=!(state==='active'||state==='paused');document.getElementById('pauseBtn').textContent=state==='paused'?'Resume':'Pause';document.getElementById('endBtn').disabled=!(state==='active'||state==='paused');document.getElementById('input').disabled=state!=='active';}
+function resetDisplay(){lines=[];setInputSource('manual');document.getElementById('transcript').textContent='Transcript hidden by default; no lines yet.';document.getElementById('refs').textContent='No references yet.';document.getElementById('log').textContent='No matches yet.';}
+function startSession(){resetDisplay();sessionStartedAt=new Date().toISOString();setState('active');document.getElementById('input').focus();}
+function togglePause(){if(sessionState==='active')setState('paused');else if(sessionState==='paused')setState('active');}
+async function endSession(){
+ const endedAt=new Date().toISOString();
+ const payload={version:'0.6.2',started_at:sessionStartedAt,ended_at:endedAt,audio_saved:false,transcript:lines.map((text,i)=>({sequence:i+1,text}))};
+ try{const res=await fetch('/api/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const out=await res.json();if(!res.ok)throw new Error(out.error||('HTTP '+res.status));setState('ended');document.getElementById('log').textContent += `\nSession saved locally: sessions/${out.file}`;}catch(err){document.getElementById('log').textContent += `\nSAVE FAILED: ${err.message}`;alert('Session could not be saved. It remains visible in this page.');}
+}
+function loadKB(){document.getElementById('kbStatus').textContent=`KB: ${KB.length} entries loaded`;document.getElementById('log').textContent=`Knowledge base embedded: ${KB.length} entries loaded.\nTranscription adapter: ready; live engine not connected.`;}
+
+document.getElementById('input').addEventListener('keydown',e=>{if(e.key==='Enter')submitLine()});setState('ready');loadKB();
+</script>
+<script>
+(() => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const statusEl = document.getElementById('micStatus');
+  const interimEl = document.getElementById('micInterim');
+  const startBtn = document.getElementById('startMicBtn');
+  const stopBtn = document.getElementById('stopMicBtn');
+  let micStream = null;
+  let recognition = null;
+
+  function setStatus(label) { statusEl.textContent = label; }
+
+  function submitTranscript(text) {
+    const input = document.getElementById('input');
+    if (!input) { setStatus('TRANSCRIPTION ERROR: input adapter missing'); return; }
+    input.value = text;
+    input.dispatchEvent(new Event('input', {bubbles:true}));
+    if (typeof window.submitLine === 'function') window.submitLine();
+    else setStatus('TRANSCRIPTION ERROR: matcher adapter missing');
+    setInputSource('transcription');
+  }
+
+  async function requestMicrophone() {
+    if (!window.isSecureContext) {
+      throw new Error('INSECURE_CONTEXT');
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('GET_USER_MEDIA_UNAVAILABLE');
+    }
+    setStatus('REQUESTING MICROPHONE PERMISSION…');
+    micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const tracks = micStream.getAudioTracks();
+    const label = tracks[0]?.label || 'microphone';
+    setStatus('MIC PERMISSION GRANTED · ' + label);
+    return micStream;
+  }
+
+  function buildRecognition() {
+    if (!SpeechRecognition) throw new Error('SPEECH_RECOGNITION_UNAVAILABLE');
+    const r = new SpeechRecognition();
+    r.continuous = true;
+    r.interimResults = true;
+    r.lang = 'en-US';
+    r.onstart = () => { setStatus('MIC LISTENING'); startBtn.disabled = true; stopBtn.disabled = false; };
+    r.onend = () => { if (startBtn.disabled) setStatus('MIC STOPPED'); startBtn.disabled = false; stopBtn.disabled = true; };
+    r.onerror = (event) => {
+      const map = {'not-allowed':'PERMISSION DENIED','service-not-allowed':'PERMISSION DENIED','audio-capture':'MICROPHONE NOT FOUND','network':'TRANSCRIPTION NETWORK ERROR','no-speech':'NO SPEECH DETECTED'};
+      setStatus(map[event.error] || ('TRANSCRIPTION ERROR: ' + event.error));
+    };
+    r.onresult = (event) => {
+      let interim=''; const finals=[];
+      for(let i=event.resultIndex;i<event.results.length;i++){
+        const phrase=event.results[i][0].transcript.trim();
+        if(event.results[i].isFinal) finals.push(phrase); else interim += phrase+' ';
+      }
+      interimEl.textContent=interim.trim();
+      for(const phrase of finals){ interimEl.textContent=phrase; submitTranscript(phrase); }
+    };
+    return r;
+  }
+
+  startBtn.addEventListener('click', async () => {
+    try {
+      if (location.protocol === 'file:') {
+        setStatus('LOCAL FILE MODE · HOST THIS PAGE OVER HTTPS');
+        throw new Error('INSECURE_CONTEXT');
+      }
+      await requestMicrophone();
+      recognition = recognition || buildRecognition();
+      recognition.start();
+    } catch (e) {
+      if (e?.name === 'NotAllowedError') setStatus('PERMISSION DENIED');
+      else if (e?.name === 'NotFoundError') setStatus('MICROPHONE NOT FOUND');
+      else if (e?.message === 'INSECURE_CONTEXT') setStatus('MIC BLOCKED: OPEN VIA LOCALHOST/HTTPS');
+      else if (e?.message === 'SPEECH_RECOGNITION_UNAVAILABLE') setStatus('MIC OK · SPEECH RECOGNITION UNSUPPORTED');
+      else setStatus('MIC ERROR: ' + (e?.message || e));
+      startBtn.disabled = false;
+    }
+  });
+
+  stopBtn.addEventListener('click', () => {
+    try { recognition?.stop(); } catch(e) {}
+    if (micStream) { micStream.getTracks().forEach(t=>t.stop()); micStream=null; }
+    setStatus('MIC STOPPED'); startBtn.disabled=false; stopBtn.disabled=true;
+  });
+
+  if (location.protocol === 'file:') setStatus('NOT READY · DOWNLOADED FILE · HTTPS HOST REQUIRED');
+  else if (!window.isSecureContext) setStatus('NOT READY · INSECURE CONTEXT · HTTPS REQUIRED');
+  else if (!navigator.mediaDevices?.getUserMedia) setStatus('MIC API UNAVAILABLE');
+  else setStatus(SpeechRecognition ? 'READY · TAP START MIC TO REQUEST PERMISSION' : 'READY · MIC CAPTURE AVAILABLE · SPEECH RECOGNITION UNSUPPORTED');
+  const env=document.getElementById('environment'); if(env) env.textContent='Environment: '+location.protocol+' // Secure context: '+window.isSecureContext+' // Mic API: '+Boolean(navigator.mediaDevices?.getUserMedia)+' // Speech recognition: '+Boolean(SpeechRecognition);
+})();
+</script>
+
+</body></html>
